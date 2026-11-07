@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ski Conditions",
+        "description": "Choose resorts and how often to refresh. Weather/forecast: Open-Meteo. Snow reports: OnTheSnow and Snow-Forecast.com.",
+        "data": {
+          "resorts": "Resorts",
+          "update_interval": "Update interval (minutes)"
+        }
+      }
+    },
+    "error": {
+      "no_resorts": "Select at least one resort."
+    },
+    "abort": {
+      "already_configured": "Ski Conditions is already set up. Use Configure to change resorts."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ski Conditions options",
+        "data": {
+          "resorts": "Resorts",
+          "update_interval": "Update interval (minutes)"
+        }
+      },
+      "sources": {
+        "title": "Snow report sources",
+        "description": "Advanced: page identifiers for each resort. OnTheSnow uses the path in onthesnow.com/<path>/skireport; Snow-Forecast uses the slug in snow-forecast.com/resorts/<slug>/snow-report. Clear a field to disable that source for a resort.",
+        "data": {
+          "sunshine_village_onthesnow": "Sunshine Village – OnTheSnow path",
+          "sunshine_village_snowforecast": "Sunshine Village – Snow-Forecast slug",
+          "lake_louise_onthesnow": "Lake Louise – OnTheSnow path",
+          "lake_louise_snowforecast": "Lake Louise – Snow-Forecast slug",
+          "panorama_onthesnow": "Panorama – OnTheSnow path",
+          "panorama_snowforecast": "Panorama – Snow-Forecast slug",
+          "kicking_horse_onthesnow": "Kicking Horse – OnTheSnow path",
+          "kicking_horse_snowforecast": "Kicking Horse – Snow-Forecast slug",
+          "fernie_onthesnow": "Fernie – OnTheSnow path",
+          "fernie_snowforecast": "Fernie – Snow-Forecast slug",
+          "castle_mountain_onthesnow": "Castle Mountain – OnTheSnow path",
+          "castle_mountain_snowforecast": "Castle Mountain – Snow-Forecast slug"
+        }
+      }
+    },
+    "error": {
+      "no_resorts": "Select at least one resort."
+    }
+  }
+}

@@ -1,0 +1,38 @@
+# Add via Settings -> Automations -> Create -> ⋮ Edit in YAML (one automation at a time),
+# or paste the list into automations.yaml. Replace notify.mobile_app_phone with your notifier.
+
+- alias: "Ski: powder day alert"
+  triggers:
+    - trigger: time
+      at: "06:30:00"
+  conditions:
+    - condition: template
+      value_template: >
+        {{ ['sunshine_village','lake_louise','panorama','kicking_horse','fernie','castle_mountain']
+           | map('regex_replace','^(.*)$','sensor.\1_snowfall_24h')
+           | map('states') | map('float', 0) | max >= 15 }}
+  actions:
+    - action: notify.mobile_app_phone
+      data:
+        title: "Powder day ❄️"
+        message: >
+          {% set ns = namespace(lines=[]) %}
+          {% for r in ['sunshine_village','lake_louise','panorama','kicking_horse','fernie','castle_mountain'] %}
+            {% set v = states('sensor.' ~ r ~ '_snowfall_24h') | float(0) %}
+            {% if v >= 5 %}{% set ns.lines = ns.lines + [state_attr('sensor.' ~ r ~ '_snowfall_24h','friendly_name') ~ ': ' ~ v ~ ' cm'] %}{% endif %}
+          {% endfor %}
+          {{ ns.lines | join('\n') }}
+
+- alias: "Ski: poll faster when a storm is forecast"
+  triggers:
+    - trigger: time_pattern
+      hours: "/3"
+  actions:
+    - action: number.set_value
+      target:
+        entity_id: number.ski_conditions_update_interval
+      data:
+        value: >
+          {{ 15 if (states.sensor
+                    | selectattr('entity_id','search','_forecast_snowfall_next_24h$')
+                    | map(attribute='state') | map('float', 0) | max) >= 10 else 60 }}
