@@ -23,6 +23,7 @@ from html.parser import HTMLParser
 from typing import Any
 
 from .const import (
+    OPEN_METEO_MAX_RESORTS_PER_CALL,
     ONTHESNOW_URL,
     OPEN_METEO_URL,
     REQUEST_TIMEOUT,
@@ -355,7 +356,7 @@ def parse_snowforecast(html: str) -> SnowReport:
     if m:
         report.lifts_open, report.lifts_total = int(m.group(1)), int(m.group(2))
     m = re.search(r"Piste conditions:?\s*([A-Za-z][A-Za-z ]{2,30}?)\s+(?:Off ?Piste|Next|Lifts)", text)
-    if m:
+    if m and m.group(1).strip().lower() not in ("tell us", "n/a", "none"):
         report.surface = m.group(1).strip()
     if report.summit_depth is None and report.base_depth is None:
         report.notes.append("snow depth labels not found")
@@ -486,17 +487,54 @@ async def _get(session: Any, url: str, *, params: dict | None = None, json_: boo
 
 
 async def fetch_open_meteo(session: Any, resorts: list[Resort]) -> dict[str, WeatherData]:
-    payload = await _get(
-        session, OPEN_METEO_URL, params=build_open_meteo_params(resorts), json_=True
-    )
-    if isinstance(payload, dict) and payload.get("error"):
-        raise SourceError(f"Open-Meteo: {payload.get('reason')}")
-    return parse_open_meteo(payload, resorts)
+    """Fetch all resorts, batched so the request URL stays a sensible length."""
+    out: dict[str, WeatherData] = {}
+    step = OPEN_METEO_MAX_RESORTS_PER_CALL
+    for i in range(0, len(resorts), step):
+        batch = resorts[i : i + step]
+        payload = await _get(
+            session, OPEN_METEO_URL, params=build_open_meteo_params(batch), json_=True
+        )
+        if isinstance(payload, dict) and payload.get("error"):
+            raise SourceError(f"Open-Meteo: {payload.get('reason')}")
+        out.update(parse_open_meteo(payload, batch))
+    return out
 
 
 async def fetch_onthesnow(session: Any, path: str) -> SnowReport:
     html = await _get(session, ONTHESNOW_URL.format(path=path.strip("/")))
     return parse_onthesnow(html)
+
+
+def describe_report(report: SnowReport) -> str:
+    """One-line human summary used by the setup flow's source test."""
+    parts = []
+    if report.base_depth is not None:
+        parts.append(f"base {report.base_depth:g} cm")
+    if report.summit_depth is not None:
+        parts.append(f"summit {report.summit_depth:g} cm")
+    if report.snow_24h is not None:
+        parts.append(f"24h {report.snow_24h:g} cm")
+    if report.fresh_snow is not None:
+        parts.append(f"fresh {report.fresh_snow:g} cm")
+    if report.lifts_open is not None:
+        parts.append(f"lifts {report.lifts_open}/{report.lifts_total or '?'}")
+    if report.report_date:
+        parts.append(f"reported {report.report_date}")
+    return ", ".join(parts)
+
+
+async def test_source(session: Any, kind: str, value: str) -> tuple[bool | None, str]:
+    """Load one source page. Returns (ok, message); ok None = source disabled."""
+    if not value.strip():
+        return None, "not used"
+    try:
+        report = await (fetch_onthesnow if kind == "onthesnow" else fetch_snowforecast)(session, value)
+    except SourceError as err:
+        return False, str(err)
+    if not report.has_data():
+        return False, "page loaded but no snow data found (" + "; ".join(report.notes) + ")"
+    return True, describe_report(report) or "OK"
 
 
 async def fetch_snowforecast(session: Any, slug: str) -> SnowReport:

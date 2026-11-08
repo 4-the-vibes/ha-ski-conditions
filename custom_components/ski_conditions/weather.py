@@ -46,7 +46,8 @@ def wmo_to_condition(code: int | None, is_day: bool = True) -> str | None:
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator = entry.runtime_data
-    async_add_entities(ResortWeather(coordinator, rid) for rid in coordinator.resort_ids)
+    for subentry_id, resort in coordinator.subentry_resorts.items():
+        async_add_entities([ResortWeather(coordinator, resort)], config_subentry_id=subentry_id)
 
 
 class ResortWeather(ResortEntity, SingleCoordinatorWeatherEntity):
@@ -60,8 +61,8 @@ class ResortWeather(ResortEntity, SingleCoordinatorWeatherEntity):
     _attr_native_visibility_unit = UnitOfLength.KILOMETERS
     _attr_supported_features = WeatherEntityFeature.FORECAST_HOURLY | WeatherEntityFeature.FORECAST_DAILY
 
-    def __init__(self, coordinator, resort_id: str) -> None:
-        super().__init__(coordinator, resort_id, "weather")
+    def __init__(self, coordinator, resort) -> None:
+        super().__init__(coordinator, resort, "weather")
 
     @property
     def _cur(self) -> dict:

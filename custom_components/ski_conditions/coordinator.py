@@ -24,12 +24,10 @@ from .api import (
     summarize_hours,
 )
 from .const import (
-    CONF_RESORTS,
-    CONF_SOURCES,
     CONF_UPDATE_INTERVAL,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
-    RESORTS,
+    SUBENTRY_RESORT,
     Resort,
 )
 
@@ -49,7 +47,6 @@ class ResortState:
     errors: dict[str, str] = field(default_factory=dict)
     updated: dict[str, datetime] = field(default_factory=dict)
 
-    # ---- merged, reported-first values ---------------------------------- #
     def pick(self, *candidates: tuple[str, str]) -> tuple[Any, str | None]:
         """Return the first non-None (value, source) from (source, attr) pairs."""
         for src, attr in candidates:
@@ -60,21 +57,29 @@ class ResortState:
 
 
 def get_interval(entry: ConfigEntry) -> int:
-    return int(
-        entry.options.get(
-            CONF_UPDATE_INTERVAL,
-            entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
-        )
-    )
+    return int(entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL))
 
 
-def get_resort_ids(entry: ConfigEntry) -> list[str]:
-    ids = entry.options.get(CONF_RESORTS, entry.data.get(CONF_RESORTS, list(RESORTS)))
-    return [i for i in ids if i in RESORTS]
+def resort_subentries(entry: ConfigEntry) -> dict[str, Resort]:
+    """subentry_id -> Resort for every resort sub-entry."""
+    out: dict[str, Resort] = {}
+    for sub_id, sub in entry.subentries.items():
+        if sub.subentry_type != SUBENTRY_RESORT:
+            continue
+        try:
+            out[sub_id] = Resort.from_dict(dict(sub.data))
+        except (KeyError, TypeError, ValueError) as err:
+            _LOGGER.error("Ignoring malformed resort %s: %s", sub.title, err)
+    return out
+
+
+def resorts_fingerprint(entry: ConfigEntry) -> tuple:
+    """Changes to this mean entities must be rebuilt (reload)."""
+    return tuple(sorted((sid, tuple(sorted(r.to_dict().items()))) for sid, r in resort_subentries(entry).items()))
 
 
 class SkiConditionsCoordinator(DataUpdateCoordinator[dict[str, ResortState]]):
-    """Fetch all sources for all selected resorts."""
+    """Fetch all sources for all configured resorts."""
 
     config_entry: ConfigEntry
 
@@ -86,26 +91,18 @@ class SkiConditionsCoordinator(DataUpdateCoordinator[dict[str, ResortState]]):
             name=DOMAIN,
             update_interval=timedelta(minutes=get_interval(entry)),
         )
-        self.resort_ids = get_resort_ids(entry)
-        self.sources_snapshot = dict(entry.options.get(CONF_SOURCES, {}))
+        self.subentry_resorts = resort_subentries(entry)
+        self.fingerprint = resorts_fingerprint(entry)
         self._session = async_get_clientsession(hass)
         self._sem = asyncio.Semaphore(3)
         self._last: dict[str, ResortState] = {}
 
     @property
     def resorts(self) -> list[Resort]:
-        return [RESORTS[i] for i in self.resort_ids]
-
-    def _source(self, resort: Resort, key: str) -> str:
-        overrides = self.config_entry.options.get(CONF_SOURCES, {}).get(resort.id, {})
-        return (overrides.get(key) or getattr(resort, key)).strip()
+        return list(self.subentry_resorts.values())
 
     async def async_set_interval(self, minutes: int) -> None:
-        """Change polling interval live (called by the number entity).
-
-        Persisting to options fires the update listener, which applies the new
-        interval and triggers a refresh (that also reschedules the timer).
-        """
+        """Persist a new interval; the update listener applies it live."""
         options = {**self.config_entry.options, CONF_UPDATE_INTERVAL: int(minutes)}
         self.hass.config_entries.async_update_entry(self.config_entry, options=options)
 
@@ -115,13 +112,14 @@ class SkiConditionsCoordinator(DataUpdateCoordinator[dict[str, ResortState]]):
 
     async def _async_update_data(self) -> dict[str, ResortState]:
         resorts = self.resorts
+        if not resorts:
+            return {}
         now = dt_util.utcnow()
 
         jobs: list[Any] = [fetch_open_meteo(self._session, resorts)]
         for r in resorts:
-            path, slug = self._source(r, "onthesnow"), self._source(r, "snowforecast")
-            jobs.append(self._guarded(fetch_onthesnow(self._session, path)) if path else _none())
-            jobs.append(self._guarded(fetch_snowforecast(self._session, slug)) if slug else _none())
+            jobs.append(self._guarded(fetch_onthesnow(self._session, r.onthesnow)) if r.onthesnow else _none())
+            jobs.append(self._guarded(fetch_snowforecast(self._session, r.snowforecast)) if r.snowforecast else _none())
         results = await asyncio.gather(*jobs, return_exceptions=True)
 
         weather_all = results[0]
@@ -137,7 +135,6 @@ class SkiConditionsCoordinator(DataUpdateCoordinator[dict[str, ResortState]]):
             prev = self._last.get(r.id) or ResortState(resort=r)
             st = ResortState(resort=r, updated=dict(prev.updated))
 
-            # weather
             if r.id in weather_all:
                 st.weather = weather_all[r.id]
                 st.updated["open_meteo"] = now
@@ -145,7 +142,6 @@ class SkiConditionsCoordinator(DataUpdateCoordinator[dict[str, ResortState]]):
                 st.weather = prev.weather  # keep last good
                 st.errors["open_meteo"] = weather_err or "no data"
 
-            # reports
             for key, res in (("onthesnow", results[1 + 2 * i]), ("snowforecast", results[2 + 2 * i])):
                 if isinstance(res, SnowReport) and res.has_data():
                     setattr(st, key, res)

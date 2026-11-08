@@ -3,50 +3,103 @@
     "step": {
       "user": {
         "title": "Ski Conditions",
-        "description": "Choose resorts and how often to refresh. Weather/forecast: Open-Meteo. Snow reports: OnTheSnow and Snow-Forecast.com.",
+        "description": "Pick any resorts to start with (type to search) and how often to refresh. You can add, remove and edit resorts later with **Add resort** on the integration page, including custom ones.",
         "data": {
           "resorts": "Resorts",
-          "update_interval": "Update interval (minutes)"
+          "update_interval": "Update interval"
         }
       }
     },
-    "error": {
-      "no_resorts": "Select at least one resort."
-    },
     "abort": {
-      "already_configured": "Ski Conditions is already set up. Use Configure to change resorts."
+      "already_configured": "Ski Conditions is already set up. Use **Add resort** on the integration page."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Ski Conditions options",
+        "title": "Ski Conditions",
         "data": {
-          "resorts": "Resorts",
-          "update_interval": "Update interval (minutes)"
-        }
-      },
-      "sources": {
-        "title": "Snow report sources",
-        "description": "Advanced: page identifiers for each resort. OnTheSnow uses the path in onthesnow.com/<path>/skireport; Snow-Forecast uses the slug in snow-forecast.com/resorts/<slug>/snow-report. Clear a field to disable that source for a resort.",
-        "data": {
-          "sunshine_village_onthesnow": "Sunshine Village – OnTheSnow path",
-          "sunshine_village_snowforecast": "Sunshine Village – Snow-Forecast slug",
-          "lake_louise_onthesnow": "Lake Louise – OnTheSnow path",
-          "lake_louise_snowforecast": "Lake Louise – Snow-Forecast slug",
-          "panorama_onthesnow": "Panorama – OnTheSnow path",
-          "panorama_snowforecast": "Panorama – Snow-Forecast slug",
-          "kicking_horse_onthesnow": "Kicking Horse – OnTheSnow path",
-          "kicking_horse_snowforecast": "Kicking Horse – Snow-Forecast slug",
-          "fernie_onthesnow": "Fernie – OnTheSnow path",
-          "fernie_snowforecast": "Fernie – Snow-Forecast slug",
-          "castle_mountain_onthesnow": "Castle Mountain – OnTheSnow path",
-          "castle_mountain_snowforecast": "Castle Mountain – Snow-Forecast slug"
+          "update_interval": "Update interval"
         }
       }
-    },
-    "error": {
-      "no_resorts": "Select at least one resort."
+    }
+  },
+  "config_subentries": {
+    "resort": {
+      "entry_type": "Resort",
+      "initiate_flow": {
+        "user": "Add resort",
+        "reconfigure": "Edit resort"
+      },
+      "step": {
+        "user": {
+          "title": "Add a resort",
+          "description": "Type to search about 200 resorts across Canada and the western US, or pick **Custom resort** at the top.",
+          "data": {
+            "resort": "Resort"
+          }
+        },
+        "custom": {
+          "title": "Custom resort",
+          "description": "Enter the resort's details. Coordinates and elevations drive the weather forecast; the two page fields are optional snow-report sources.",
+          "data": {
+            "name": "Name",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "base_elevation": "Base elevation",
+            "summit_elevation": "Summit elevation",
+            "onthesnow": "OnTheSnow page (path)",
+            "snowforecast": "Snow-Forecast page (slug)"
+          },
+          "data_description": {
+            "latitude": "Decimal degrees, e.g. 51.0785. Used for the weather forecast.",
+            "longitude": "Decimal degrees, west is negative, e.g. -115.7731.",
+            "base_elevation": "Base area elevation in metres.",
+            "summit_elevation": "Top lift elevation in metres.",
+            "onthesnow": "The part of onthesnow.com/<path>/skireport, e.g. alberta/lake-louise. Leave empty if the resort isn't on OnTheSnow.",
+            "snowforecast": "The part of snow-forecast.com/resorts/<slug>/snow-report, e.g. Lake-Louise. Leave empty if not listed."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit {resort}",
+          "data": {
+            "name": "Name",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "base_elevation": "Base elevation",
+            "summit_elevation": "Summit elevation",
+            "onthesnow": "OnTheSnow page (path)",
+            "snowforecast": "Snow-Forecast page (slug)"
+          },
+          "data_description": {
+            "latitude": "Decimal degrees, e.g. 51.0785. Used for the weather forecast.",
+            "longitude": "Decimal degrees, west is negative, e.g. -115.7731.",
+            "base_elevation": "Base area elevation in metres.",
+            "summit_elevation": "Top lift elevation in metres.",
+            "onthesnow": "The part of onthesnow.com/<path>/skireport, e.g. alberta/lake-louise. Leave empty if the resort isn't on OnTheSnow.",
+            "snowforecast": "The part of snow-forecast.com/resorts/<slug>/snow-report, e.g. Lake-Louise. Leave empty if not listed."
+          }
+        },
+        "sources": {
+          "title": "Check snow-report sources for {resort}",
+          "description": "{ots_icon} **OnTheSnow:** {ots_msg}\n\n{sf_icon} **Snow-Forecast:** {sf_msg}\n\nFix a page name if a test failed (or clear it to skip that source), then **Submit**. Changed names are re-tested before saving. Weather and forecast come from Open-Meteo and work either way.",
+          "data": {
+            "onthesnow": "OnTheSnow page (path)",
+            "snowforecast": "Snow-Forecast page (slug)",
+            "test_again": "Test again instead of saving"
+          }
+        }
+      },
+      "error": {
+        "unknown_resort": "Pick a resort from the list, or choose Custom resort.",
+        "invalid_name": "Enter a name.",
+        "name_in_use": "A resort with this name already exists.",
+        "summit_below_base": "Summit elevation must be at or above base elevation."
+      },
+      "abort": {
+        "already_configured": "That resort is already added.",
+        "reconfigure_successful": "Resort updated."
+      }
     }
   }
 }

@@ -270,16 +270,18 @@ SENSORS: tuple[SkiSensorDescription, ...] = (
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator = entry.runtime_data
-    async_add_entities(
-        SkiSensor(coordinator, rid, desc) for rid in coordinator.resort_ids for desc in SENSORS
-    )
+    for subentry_id, resort in coordinator.subentry_resorts.items():
+        async_add_entities(
+            [SkiSensor(coordinator, resort, desc) for desc in SENSORS],
+            config_subentry_id=subentry_id,
+        )
 
 
 class SkiSensor(ResortEntity, SensorEntity):
     entity_description: SkiSensorDescription
 
-    def __init__(self, coordinator, resort_id: str, description: SkiSensorDescription) -> None:
-        super().__init__(coordinator, resort_id, description.key)
+    def __init__(self, coordinator, resort, description: SkiSensorDescription) -> None:
+        super().__init__(coordinator, resort, description.key)
         self.entity_description = description
 
     def _value(self) -> tuple[Any, dict[str, Any]]:

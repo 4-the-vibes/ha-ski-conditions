@@ -10,7 +10,7 @@ from ski_conditions.api import (
     parse_snowforecast,
     summarize_hours,
 )
-from ski_conditions.const import RESORTS
+from ski_conditions.catalog import CATALOG as RESORTS
 
 OTS_META = (
     '<meta name="description" content="The Kicking Horse snow report for Nov 06 is a 4&quot; '
@@ -141,3 +141,28 @@ def test_open_meteo_wrong_count():
     from ski_conditions.api import SourceError
     with pytest.raises(SourceError):
         parse_open_meteo([_om_location()], [RESORTS["fernie"]])
+
+
+SF_NAKISKA = """<div>The Nakiska snow report is: 0 out of 6 Lifts open.</div>
+<div>Ankle</div><div>6 cm</div><div>Wed 28 Oct (PM)</div>
+<p>Nakiska snow depths: updated 02 November 2026</p>
+<table><tr><td>Upper snow depth:</td><td>0 cm</td></tr><tr><td>Lower snow depth:</td><td>0 cm</td></tr></table>
+<table><tr><td>Piste conditions:</td><td>Tell us</td></tr><tr><td>Off Piste conditions:</td><td></td></tr>
+<tr><td>Lifts open:</td><td>0 out of 6</td></tr></table>"""
+
+
+def test_snowforecast_nakiska_preseason():
+    r = parse_snowforecast(SF_NAKISKA)
+    assert (r.summit_depth, r.base_depth) == (0, 0)
+    assert (r.lifts_open, r.lifts_total) == (0, 6)
+    assert r.report_date == "02 November 2026"
+    assert r.surface is None  # "Tell us" placeholder ignored
+
+
+def test_all_resorts_in_one_open_meteo_request():
+    resorts = [RESORTS[i] for i in ("sunshine_village", "lake_louise", "panorama", "kicking_horse",
+                                     "fernie", "castle_mountain", "nakiska", "norquay")]
+    params = build_open_meteo_params(resorts)
+    assert len(params["elevation"].split(",")) == 16
+    out = parse_open_meteo([_om_location() for _ in range(16)], resorts)
+    assert set(out) >= {"nakiska", "norquay"}

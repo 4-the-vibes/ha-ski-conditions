@@ -10,7 +10,7 @@ cards:
       - button.ski_conditions_refresh_now
   - type: glance
     title: Fresh snow 24h
-    columns: 3
+    columns: 4
     entities:
       - entity: sensor.sunshine_village_snowfall_24h
         name: Sunshine Village
@@ -24,9 +24,13 @@ cards:
         name: Fernie
       - entity: sensor.castle_mountain_snowfall_24h
         name: Castle Mountain
+      - entity: sensor.nakiska_snowfall_24h
+        name: Nakiska
+      - entity: sensor.norquay_snowfall_24h
+        name: Norquay
   - type: glance
     title: Forecast snow next 24h
-    columns: 3
+    columns: 4
     entities:
       - entity: sensor.sunshine_village_forecast_snowfall_next_24h
         name: Sunshine Village
@@ -40,6 +44,10 @@ cards:
         name: Fernie
       - entity: sensor.castle_mountain_forecast_snowfall_next_24h
         name: Castle Mountain
+      - entity: sensor.nakiska_forecast_snowfall_next_24h
+        name: Nakiska
+      - entity: sensor.norquay_forecast_snowfall_next_24h
+        name: Norquay
   - type: vertical-stack
     cards:
       - type: weather-forecast
@@ -219,4 +227,64 @@ cards:
           - entity: sensor.castle_mountain_lifts_open
             name: Lifts open
           - entity: sensor.castle_mountain_report_date
+            name: Reported
+  - type: vertical-stack
+    cards:
+      - type: weather-forecast
+        entity: weather.nakiska_summit_weather
+        name: Nakiska
+        forecast_type: hourly
+      - type: entities
+        entities:
+          - entity: sensor.nakiska_base_depth
+            name: Base
+          - entity: sensor.nakiska_summit_depth
+            name: Summit
+          - entity: sensor.nakiska_powder_depth
+            name: Powder
+          - entity: sensor.nakiska_snowfall_24h
+            name: 24 h snowfall
+          - entity: sensor.nakiska_summit_temperature
+            name: Summit temp
+          - entity: sensor.nakiska_base_temperature
+            name: Base temp
+          - entity: sensor.nakiska_wind_speed
+            name: Wind
+          - entity: sensor.nakiska_wind_gust
+            name: Gusts
+          - entity: sensor.nakiska_forecast_next_24h
+            name: Next 24 h
+          - entity: sensor.nakiska_lifts_open
+            name: Lifts open
+          - entity: sensor.nakiska_report_date
+            name: Reported
+  - type: vertical-stack
+    cards:
+      - type: weather-forecast
+        entity: weather.norquay_summit_weather
+        name: Norquay
+        forecast_type: hourly
+      - type: entities
+        entities:
+          - entity: sensor.norquay_base_depth
+            name: Base
+          - entity: sensor.norquay_summit_depth
+            name: Summit
+          - entity: sensor.norquay_powder_depth
+            name: Powder
+          - entity: sensor.norquay_snowfall_24h
+            name: 24 h snowfall
+          - entity: sensor.norquay_summit_temperature
+            name: Summit temp
+          - entity: sensor.norquay_base_temperature
+            name: Base temp
+          - entity: sensor.norquay_wind_speed
+            name: Wind
+          - entity: sensor.norquay_wind_gust
+            name: Gusts
+          - entity: sensor.norquay_forecast_next_24h
+            name: Next 24 h
+          - entity: sensor.norquay_lifts_open
+            name: Lifts open
+          - entity: sensor.norquay_report_date
             name: Reported

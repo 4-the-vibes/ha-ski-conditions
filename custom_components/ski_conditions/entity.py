@@ -5,7 +5,8 @@ from __future__ import annotations
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, MANUFACTURER, RESORTS
+from .catalog import REGION_NAMES
+from .const import DOMAIN, MANUFACTURER, ONTHESNOW_URL, Resort
 from .coordinator import ResortState, SkiConditionsCoordinator
 
 
@@ -24,17 +25,19 @@ class ResortEntity(CoordinatorEntity[SkiConditionsCoordinator]):
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: SkiConditionsCoordinator, resort_id: str, key: str) -> None:
+    def __init__(self, coordinator: SkiConditionsCoordinator, resort: Resort, key: str) -> None:
         super().__init__(coordinator)
-        self.resort_id = resort_id
-        resort = RESORTS[resort_id]
-        self._attr_unique_id = f"{resort_id}_{key}"
+        self.resort = resort
+        self.resort_id = resort.id
+        self._attr_unique_id = f"{resort.id}_{key}"
+        region = REGION_NAMES.get(resort.region, resort.region)
+        url = resort.website or (ONTHESNOW_URL.format(path=resort.onthesnow) if resort.onthesnow else None)
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, resort_id)},
+            identifiers={(DOMAIN, resort.id)},
             name=resort.name,
             manufacturer=MANUFACTURER,
-            model=f"Ski resort ({resort.base_elevation}–{resort.summit_elevation} m)",
-            configuration_url=resort.website,
+            model=f"Ski resort{f' · {region}' if region else ''} ({resort.base_elevation}–{resort.summit_elevation} m)",
+            configuration_url=url,
             entry_type=DeviceEntryType.SERVICE,
         )
 
